@@ -1,0 +1,29 @@
+{
+  "version": "1.0",
+  "culture_signals": {
+    "async-first": [
+      "async.first",
+      "async\\s+first",
+      "write\\s+a\\s+lot"
+    ],
+    "fast-paced": [
+      "move\\s+fast",
+      "ship.*week",
+      "six\\s+months.*change"
+    ],
+    "written-communication-heavy": [
+      "write\\s+a\\s+lot",
+      "writing.*painful"
+    ],
+    "disagree-and-commit": [
+      "disagree\\s+openly",
+      "decide\\s+quickly"
+    ],
+    "startup-stage": [
+      "series\\s+a",
+      "founding\\s+team",
+      "from\\s+scratch",
+      "4\\s+to\\s+12"
+    ]
+  }
+}

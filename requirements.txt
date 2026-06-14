@@ -1,0 +1,30 @@
+# Core data processing
+pandas>=2.0.0
+numpy>=1.24.0
+pyarrow>=12.0.0
+
+# NLP & Text Processing
+sentence-transformers>=2.2.0
+python-docx>=0.8.11
+fuzzywuzzy>=0.18.0
+python-Levenshtein>=0.23.0
+
+# Information Retrieval & Ranking
+rank-bm25>=0.2.2
+faiss-cpu>=1.7.4
+
+# Machine Learning & Metrics
+scikit-learn>=1.3.0
+
+# Data Validation & Config
+pydantic>=2.0.0
+
+# Utilities
+python-dotenv>=1.0.0
+tqdm>=4.66.0
+
+# PDF parsing (primary library for PDF extraction)
+pdfplumber>=0.11.0
+
+# Development/Testing
+pytest>=7.4.0

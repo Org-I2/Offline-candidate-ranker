@@ -1,0 +1,119 @@
+{
+  "version": "1.1",
+  "disqualifiers": {
+    "pure-research": {
+      "description": "Pure research background without production deployment",
+      "patterns": [
+        "(?i)pure\\s+research\\s+environment",
+        "(?i)academic\\s+lab",
+        "(?i)research.only\\s+role",
+        "(?i)without\\s+any\\s+production\\s+deployment",
+        "(?i)no\\s+production\\s+deployment",
+        "(?i)(academic|research|ph\\.?d|phd|postdoc)\\s+(only|background|role)"
+      ],
+      "penalties": {
+        "hard_reject": true,
+        "score_multiplier": 0.1
+      }
+    },
+    "recent-llm-only": {
+      "description": "Less than 12 months of LLM/LangChain experience without pre-LLM ML background",
+      "patterns": [
+        "(?i)langchain\\s+to\\s+call\\s+openai",
+        "(?i)under\\s+12\\s+months.*llm",
+        "(?i)primarily.*langchain",
+        "(?i)primarily.*openai\\s+api",
+        "(?i)only.*langchain.*openai",
+        "(?i)(langchain|openai|gpt|llm).*less\\s+than\\s+(6|9|12)\\s+months",
+        "(?i)recent.*under.*12.*months.*langchain",
+        "(?i)AI.experience.*primarily.*recent.*langchain",
+        "(?i)only.*recent.*llm"
+      ],
+      "penalties": {
+        "hard_reject": true,
+        "score_multiplier": 0.15
+      }
+    },
+    "no-recent-code": {
+      "description": "No production code written in last 18 months (architecture/tech-lead only)",
+      "patterns": [
+        "(?i)hasn.?t\\s+written.*production\\s+code.*18\\s+months",
+        "(?i)moved\\s+into.*architecture.*without.*code",
+        "(?i)tech\\s+lead.*not\\s+coding",
+        "(?i)senior\\s+engineer.*hasn.t\\s+written",
+        "(?i)moved\\s+into.*architecture.*or.*tech\\s+lead",
+        "(?i)senior.*engineer.*production\\s+code.*18\\s+months",
+        "(?i)no.*recent.*coding|code.free|non.coding\\s+role",
+        "(?i)haven.t\\s+(written|coded).*production"
+      ],
+      "penalties": {
+        "hard_reject": true,
+        "score_multiplier": 0.2
+      }
+    },
+    "title-chaser": {
+      "description": "Career optimized for titles by switching companies every 1.5 years",
+      "patterns": [
+        "(?i)senior.*staff.*principal.*switching",
+        "(?i)title.*optimiz",
+        "(?i)every\\s+1\\.?5\\s+years",
+        "(?i)optimizing\\s+for.*senior.*staff.*principal",
+        "(?i)switching\\s+companies.*1\\.5\\s+years",
+        "(?i)title.chaser",
+        "(?i)career.*trajectory.*senior.*staff.*principal"
+      ],
+      "detection_logic": "computed_at_runtime_from_career_history",
+      "penalties": {
+        "hard_reject": false,
+        "score_multiplier": 0.5
+      }
+    },
+    "consulting-only": {
+      "description": "Entire career at consulting firms without product company experience",
+      "patterns": [
+        "(?i)tcs|infosys|wipro|accenture|cognizant|capgemini",
+        "(?i)consulting\\s+firm",
+        "(?i)services\\s+company",
+        "(?i)only\\s+worked\\s+at\\s+consulting",
+        "(?i)entire\\s+career.*(tcs|infosys|wipro|accenture|cognizant|capgemini)",
+        "(?i)(tcs|infosys|wipro|accenture|cognizant|capgemini).*entire\\s+career"
+      ],
+      "detection_logic": "check_all_companies_against_consulting_firms.json",
+      "penalties": {
+        "hard_reject": true,
+        "score_multiplier": 0.1
+      }
+    },
+    "cv-speech-robotics": {
+      "description": "Primary expertise in computer vision, speech, or robotics without NLP/IR",
+      "patterns": [
+        "(?i)primary\\s+expertise.*computer\\s+vision",
+        "(?i)primary\\s+expertise.*speech",
+        "(?i)primary\\s+expertise.*robotics",
+        "(?i)computer\\s+vision.*without.*nlp",
+        "(?i)speech.*without.*nlp",
+        "(?i)robotics.*without.*nlp",
+        "(?i)(computer\\s+vision|speech|robotics).*without.*significant.*(nlp|ir|information.retrieval|search|ranking)"
+      ],
+      "penalties": {
+        "hard_reject": true,
+        "score_multiplier": 0.2
+      }
+    },
+    "closed-source-only": {
+      "description": "5+ years entirely on closed-source proprietary systems without external validation",
+      "patterns": [
+        "(?i)closed.source.*5\\+\\s+years",
+        "(?i)proprietary.*without.*external\\s+validation",
+        "(?i)no\\s+papers.*no\\s+talks.*no\\s+open.source",
+        "(?i)closed.source|proprietary\\s+(only|system)",
+        "(?i)no\\s+(papers?|talks?|open.source|github|public)"
+      ],
+      "detection_logic": "computed_at_runtime_from_career_history",
+      "penalties": {
+        "hard_reject": false,
+        "score_multiplier": 0.4
+      }
+    }
+  }
+}

@@ -1,0 +1,263 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "JD Parsing Output Schema",
+  "description": "Structured signals extracted from a Job Description for candidate ranking",
+  "type": "object",
+  "required": [
+    "jd_id",
+    "required_skills",
+    "critical_skills",
+    "nice_to_have_skills",
+    "skill_functional_equivalents",
+    "seniority_level",
+    "seniority_range",
+    "domain",
+    "sub_domains",
+    "role_archetype",
+    "disqualifiers",
+    "disqualifying_company_patterns",
+    "title_chaser_signals",
+    "soft_penalties",
+    "production_signals",
+    "experience_type",
+    "behavioral_availability_signals",
+    "location_preference",
+    "allows_relocation",
+    "notice_period_preference",
+    "implied_signals",
+    "culture_signals",
+    "extraction_confidence",
+    "raw_jd_text",
+    "text_embedding"
+  ],
+  "properties": {
+    "jd_id": {
+      "type": "string",
+      "description": "Unique identifier for this JD"
+    },
+    "source_file": {
+      "type": "string",
+      "description": "Path to source JD file"
+    },
+    "parsed_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+
+    "required_skills": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Canonical skill names that are absolutely required"
+    },
+    "critical_skills": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Subset of required_skills that are hard disqualifiers if missing. For this JD: embeddings-retrieval, vector-search, python, ranking-evaluation"
+    },
+    "nice_to_have_skills": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Preferred but not required"
+    },
+    "skill_weights": {
+      "type": "object",
+      "additionalProperties": { "type": "number", "minimum": 0, "maximum": 1 },
+      "description": "Custom weights per skill for deep scoring"
+    },
+    "skill_functional_equivalents": {
+      "type": "object",
+      "description": "Maps each required skill to functionally equivalent signals that may appear in candidate profiles under different names. Critical for catching candidates who have the skill but not the keyword.",
+      "additionalProperties": {
+        "type": "array",
+        "items": { "type": "string" }
+      },
+      "example": {
+        "embeddings-retrieval": ["recommendation system", "semantic search", "search ranking", "information retrieval", "ann index"],
+        "vector-search": ["faiss", "approximate nearest neighbour", "inverted index", "dense retrieval", "pinecone", "weaviate", "qdrant", "milvus", "opensearch"],
+        "ranking-evaluation": ["ndcg", "mrr", "map", "a/b testing", "offline evaluation", "online evaluation", "benchmark", "relevance judgement"],
+        "python": ["python3", "py", "django", "fastapi", "flask"]
+      }
+    },
+
+    "seniority_level": {
+      "type": "string",
+      "enum": ["junior", "mid", "senior", "lead", "principal"]
+    },
+    "seniority_range": {
+      "type": "array",
+      "items": { "type": "integer" },
+      "minItems": 2,
+      "maxItems": 2,
+      "description": "[min_years, max_years]"
+    },
+
+    "domain": {
+      "type": "string",
+      "description": "Primary domain e.g. ranking-and-retrieval, data-engineering"
+    },
+    "sub_domains": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+
+    "role_archetype": {
+      "type": "string",
+      "enum": ["builder", "researcher", "operator", "generalist"],
+      "description": "What mode this role fundamentally requires. Drives trajectory scoring — a builder role rewards candidates with shipped systems over publications."
+    },
+
+    "disqualifiers": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "enum": [
+          "pure-research",
+          "recent-llm-only",
+          "no-recent-code",
+          "title-chaser",
+          "consulting-only",
+          "cv-speech-robotics",
+          "closed-source-only"
+        ]
+      },
+      "description": "Hard disqualifiers. Any candidate matching one is excluded before scoring."
+    },
+    "disqualifying_company_patterns": {
+      "type": "object",
+      "description": "Companies whose presence as the ONLY employer type disqualifies a candidate. Conditional: if candidate has prior product-company experience, disqualifier does not apply.",
+      "properties": {
+        "company_names": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Lowercase company name patterns to match against candidate employer history"
+        },
+        "disqualify_if": {
+          "type": "string",
+          "enum": ["only-employer", "any-employer"],
+          "description": "only-employer = disqualify only if ALL roles are at these companies. any-employer = disqualify regardless."
+        },
+        "exception": {
+          "type": "string",
+          "description": "Condition under which the disqualifier does not apply",
+          "example": "has_prior_product_company_experience"
+        }
+      }
+    },
+    "title_chaser_signals": {
+      "type": "object",
+      "description": "Operationalized definition of title-chasing for the feature extractor to detect",
+      "properties": {
+        "max_avg_tenure_months": {
+          "type": "integer",
+          "description": "If average tenure across company switches is below this, flag as title-chaser"
+        },
+        "min_company_switches": {
+          "type": "integer",
+          "description": "Minimum number of company switches required to apply the check"
+        },
+        "requires_title_escalation": {
+          "type": "boolean",
+          "description": "Each switch must show a title upgrade to count as title-chasing"
+        }
+      }
+    },
+
+    "soft_penalties": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Signals that reduce score but do not hard-reject. e.g. long-notice-period, framework-enthusiast, poc-only-experience"
+    },
+
+    "production_signals": {
+      "type": "object",
+      "properties": {
+        "requires_shipped_system": { "type": "boolean" },
+        "scale_level": { "type": "string", "enum": ["small", "medium", "large", "meaningful"] },
+        "user_facing": { "type": "boolean" },
+        "code_recency_months": { "type": "integer", "description": "Must have written production code in last N months" }
+      },
+      "required": ["requires_shipped_system", "scale_level", "user_facing", "code_recency_months"]
+    },
+
+    "experience_type": {
+      "type": "object",
+      "properties": {
+        "requires_product_company": { "type": "boolean" },
+        "allows_consulting_only": { "type": "boolean" },
+        "startup_experience_valued": { "type": "boolean" },
+        "research_only_disqualifies": { "type": "boolean" },
+        "min_product_company_years": {
+          "type": "integer",
+          "description": "Minimum years at product companies (not services/consulting)"
+        }
+      },
+      "required": ["requires_product_company", "allows_consulting_only", "research_only_disqualifies"]
+    },
+
+    "behavioral_availability_signals": {
+      "type": "object",
+      "description": "Signals from platform behavior that indicate whether a candidate is genuinely available. Explicitly called out in this JD — a perfect-on-paper candidate who is inactive is not actually available.",
+      "properties": {
+        "penalize_inactive": {
+          "type": "boolean",
+          "description": "Whether to down-weight candidates with low platform activity"
+        },
+        "inactive_threshold_days": {
+          "type": "integer",
+          "description": "Candidates with no activity beyond this many days get penalized"
+        },
+        "response_rate_threshold": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1,
+          "description": "Candidates below this recruiter response rate get penalized"
+        },
+        "availability_weight_in_score": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1,
+          "description": "How much behavioral availability affects the final composite score"
+        }
+      },
+      "required": ["penalize_inactive", "inactive_threshold_days", "response_rate_threshold"]
+    },
+
+    "location_preference": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "allows_relocation": { "type": "boolean" },
+    "notice_period_preference": {
+      "type": "string",
+      "enum": ["sub-30-days", "30-60-days", "flexible"]
+    },
+
+    "implied_signals": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Signals inferred from JD language not explicit in skill lists. e.g. systems-thinker, product-mindset, pre-llm-era-ml-experience"
+    },
+    "culture_signals": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "e.g. async-first, fast-paced, written-communication-heavy, scrappy"
+    },
+
+    "text_embedding": {
+      "type": ["array", "null"],
+      "items": { "type": "number" },
+      "description": "384-dim MiniLM embedding of full JD text. Null until rank.py runs."
+    },
+    "raw_jd_text": { "type": "string" },
+
+    "extraction_confidence": {
+      "type": "object",
+      "properties": {
+        "required_skills_confidence": { "type": "number", "minimum": 0, "maximum": 1 },
+        "seniority_confidence": { "type": "number", "minimum": 0, "maximum": 1 },
+        "overall_confidence": { "type": "number", "minimum": 0, "maximum": 1 }
+      },
+      "description": "If overall_confidence < 0.7, scorer falls back to pure semantic similarity and disables rule-based disqualifiers."
+    }
+  }
+}

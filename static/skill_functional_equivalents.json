@@ -1,0 +1,87 @@
+{
+  "version": "1.0",
+  "functional_equivalents": {
+    "embeddings": [
+      "recommendation system",
+      "semantic search",
+      "search ranking",
+      "information retrieval",
+      "sentence-transformers",
+      "openai embeddings",
+      "dense retrieval",
+      "neural search",
+      "bge",
+      "e5",
+      "ann index",
+      "embedding model",
+      "vector representation"
+    ],
+    "vector database": [
+      "faiss",
+      "pinecone",
+      "weaviate",
+      "qdrant",
+      "milvus",
+      "opensearch",
+      "elasticsearch",
+      "approximate nearest neighbour",
+      "inverted index",
+      "dense retrieval",
+      "hybrid search",
+      "vector store",
+      "ann search"
+    ],
+    "ranking evaluation": [
+      "ndcg",
+      "mrr",
+      "map",
+      "a/b testing",
+      "offline evaluation",
+      "online evaluation",
+      "benchmark",
+      "relevance judgement",
+      "click-through rate",
+      "engagement metrics",
+      "precision at k",
+      "recall",
+      "ranking metrics",
+      "eval framework"
+    ],
+    "python": [
+      "python3",
+      "py",
+      "django",
+      "fastapi",
+      "flask",
+      "pandas",
+      "numpy",
+      "scikit-learn"
+    ],
+    "large language models": [
+      "gpt",
+      "llama",
+      "mistral",
+      "gemini",
+      "claude",
+      "transformer",
+      "bert",
+      "roberta",
+      "t5",
+      "langchain",
+      "llamaindex",
+      "rag",
+      "fine-tuning"
+    ],
+    "learning to rank": [
+      "xgboost",
+      "lightgbm",
+      "lambdamart",
+      "ranknet",
+      "pointwise ranking",
+      "pairwise ranking",
+      "listwise ranking",
+      "gradient boosting",
+      "ltr"
+    ]
+  }
+}
