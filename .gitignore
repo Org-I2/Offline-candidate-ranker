@@ -1,0 +1,34 @@
+# Python standard ignores
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+venv/
+ENV/
+.env
+.pytest_cache/
+
+# Project-specific caches & models
+models/minilm/
+models/
+
+# Generated runtime outputs & artifacts
+artifacts/
+submission.csv
+submission_metadata.yaml
+temp_parsed.json
+
+# IDE configurations
+.idea/
+.vscode/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.swp
+
+# OS-specific files
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+.DS_Store

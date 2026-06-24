@@ -26,5 +26,8 @@ tqdm>=4.66.0
 # PDF parsing (primary library for PDF extraction)
 pdfplumber>=0.11.0
 
+# Sandbox demo
+streamlit>=1.28.0
+
 # Development/Testing
 pytest>=7.4.0
