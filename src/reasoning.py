@@ -197,11 +197,14 @@ def build_reasoning(candidate_row: dict, jd: dict, rank: int) -> str:
         # ranks 61-100: fit framing, surface gaps prominently
         exp_fit = _get(candidate_row, "experience_range_fit", 0.5) or 0.5
         top_strength = strengths[0][0] if strengths else None
+        company = _get(candidate_row, "current_company") or ""
+        years = _get(candidate_row, "total_years_exp_computed") or 0
+    
         if gap_text:
             if top_strength:
                 return f"{name} has {top_strength} but {gap_text}; marginal fit."
-            return f"{name} presents a partial match with {skills_count} skills \u2014 {gap_text}."
+            return f"{name} presents a partial match with {skills_count} skills — {gap_text}."
         if top_strength:
-            return f"{name} has {top_strength}; ranked lower due to weaker overall signal."
-        return f"{name} is a lower-confidence match with {years_exp:.1f} years of experience based on available profile data."
-
+            # Add years to differentiate candidates with same top_strength
+            return f"{name} ({years:.0f} yrs, {company}) has {top_strength}; ranked lower due to weaker overall signal."
+        return f"{name} is a lower-confidence match with {years:.0f} years at {company} based on available profile data."
