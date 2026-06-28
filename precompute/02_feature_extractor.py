@@ -128,7 +128,7 @@ def _normalize_skills(skills_raw: Any, aliases: dict) -> list:
 # ---------------------------------------------------------------------------
 
 def _parse_work_history(candidate: dict) -> list[dict]:
-    wh = _get(candidate, "work_history") or _get(candidate, "experience") or []
+    wh = _get(candidate, "career_history") or _get(candidate, "work_history") or _get(candidate, "experience") or []
     if not isinstance(wh, list):
         return []
     roles = []
@@ -422,20 +422,26 @@ def extract_features(
                 for year in skill_recency.values()
             ) if skill_recency else False
 
-            current_title = str(_get(candidate, "current_title") or _get(candidate, "title") or "")
-            current_company = str(_get(candidate, "current_company") or _get(candidate, "current_employer") or "")
-            current_location = str(_get(candidate, "current_location") or _get(candidate, "location") or "")
+            current_title = str(_get(candidate, "profile", "current_title") or "")
+            current_company = str(_get(candidate, "profile", "current_company") or "")
+            current_location = str(_get(candidate, "profile", "location") or "")
 
             company_feats = _compute_company_features(roles, consulting_firms)
 
             # Behavioral signals
-            platform_active = _get(candidate, "platform_last_active_days")
+            signals = _get(candidate, "redrob_signals") or {}
+            last_active_raw = _get(signals, "last_active_date")
+            last_active_ts = _safe_parse_date(last_active_raw)
+            platform_active = (
+                float((pd.Timestamp.today() - last_active_ts).days)
+                if last_active_ts else None
+            )
             try:
                 platform_active = float(platform_active) if platform_active is not None else None
             except (ValueError, TypeError):
                 platform_active = None
 
-            response_rate = _get(candidate, "recruiter_response_rate")
+            response_rate =_get(candidate, "redrob_signals", "recruiter_response_rate")
             try:
                 response_rate = float(response_rate) if response_rate is not None else None
             except (ValueError, TypeError):
@@ -472,7 +478,7 @@ def extract_features(
 
             record = {
                 "candidate_id": cid,
-                "full_name": str(_get(candidate, "full_name") or _get(candidate, "name") or ""),
+                "full_name": str(_get(candidate, "profile", "anonymized_name") or ""),
                 "current_title": current_title,
                 "current_company": current_company,
                 "current_location": current_location,
