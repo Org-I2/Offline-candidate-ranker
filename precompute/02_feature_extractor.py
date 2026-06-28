@@ -337,15 +337,27 @@ def _compute_title_skill_alignment(skills_list: list, current_title: str, senior
 # Profile completeness
 # ---------------------------------------------------------------------------
 
-KEY_FIELDS = [
-    "full_name", "current_title", "current_company", "current_location",
-    "skills", "work_history", "education", "total_years_experience",
-]
-
-
 def _compute_profile_completeness(candidate: dict) -> float:
-    present = sum(1 for f in KEY_FIELDS if _is_present(_get(candidate, f)))
-    return round(present / len(KEY_FIELDS), 3)
+    """Use platform's own completeness score — normalized to 0-1."""
+    score = _get(candidate, "redrob_signals", "profile_completeness_score")
+    if score is not None:
+        try:
+            return round(min(1.0, max(0.0, float(score) / 100.0)), 3)
+        except (ValueError, TypeError):
+            pass
+    # Fallback: count present nested fields
+    checks = [
+        _get(candidate, "profile", "anonymized_name"),
+        _get(candidate, "profile", "current_title"),
+        _get(candidate, "profile", "current_company"),
+        _get(candidate, "profile", "location"),
+        _get(candidate, "skills"),
+        _get(candidate, "career_history"),
+        _get(candidate, "education"),
+        _get(candidate, "profile", "years_of_experience"),
+    ]
+    present = sum(1 for f in checks if _is_present(f))
+    return round(present / len(checks), 3)
 
 
 # ---------------------------------------------------------------------------
@@ -353,11 +365,13 @@ def _compute_profile_completeness(candidate: dict) -> float:
 # ---------------------------------------------------------------------------
 
 def _build_raw_profile_text(candidate: dict, skills_list: list, roles: list[dict]) -> str:
-    title = str(_get(candidate, "current_title") or _get(candidate, "title") or "")
-    skills_str = " ".join(skills_list[:30])  # cap at 30 for embedding
+    profile = _get(candidate, "profile") or {}
+    title = str(_get(profile, "current_title") or "")
+    headline = str(_get(profile, "headline") or "")[:100]
+    summary = str(_get(profile, "summary") or "")[:300]
+    skills_str = " ".join(skills_list[:30])
     recent_desc = roles[-1]["description"][:500] if roles else ""
-    summary = str(_get(candidate, "summary") or _get(candidate, "bio") or "")[:300]
-    return f"{title} {skills_str} {recent_desc} {summary}".strip()
+    return f"{title} {headline} {skills_str} {recent_desc} {summary}".strip()
 
 
 # ---------------------------------------------------------------------------
@@ -422,53 +436,57 @@ def extract_features(
                 for year in skill_recency.values()
             ) if skill_recency else False
 
-            current_title = str(_get(candidate, "profile", "current_title") or "")
-            current_company = str(_get(candidate, "profile", "current_company") or "")
-            current_location = str(_get(candidate, "profile", "location") or "")
+            # Identity — nested under profile
+            profile = _get(candidate, "profile") or {}
+            full_name = str(_get(profile, "anonymized_name") or "")
+            current_title = str(_get(profile, "current_title") or "")
+            current_company = str(_get(profile, "current_company") or "")
+            current_location = str(_get(profile, "location") or "")
 
             company_feats = _compute_company_features(roles, consulting_firms)
 
-            # Behavioral signals
+            # Behavioral signals — all under redrob_signals
             signals = _get(candidate, "redrob_signals") or {}
+
             last_active_raw = _get(signals, "last_active_date")
             last_active_ts = _safe_parse_date(last_active_raw)
             platform_active = (
                 float((pd.Timestamp.today() - last_active_ts).days)
                 if last_active_ts else None
             )
-            try:
-                platform_active = float(platform_active) if platform_active is not None else None
-            except (ValueError, TypeError):
-                platform_active = None
 
-            response_rate =_get(candidate, "redrob_signals", "recruiter_response_rate")
+            response_rate = _get(signals, "recruiter_response_rate")
             try:
                 response_rate = float(response_rate) if response_rate is not None else None
             except (ValueError, TypeError):
                 response_rate = None
 
-            # Certifications
+            github_score = _get(signals, "github_activity_score")
+            try:
+                has_open_source = bool(github_score is not None and float(github_score) > 0)
+            except (ValueError, TypeError):
+                has_open_source = False
+
+            # Certifications — schema has year as integer directly
             certs = _get(candidate, "certifications") or []
             cert_list = certs if isinstance(certs, list) else []
             cert_count = len(cert_list)
             cert_year = None
-            if cert_list:
-                for cert in cert_list:
-                    yr_raw = _get(cert, "year") or _get(cert, "date") if isinstance(cert, dict) else None
-                    yr_ts = _safe_parse_date(yr_raw)
-                    if yr_ts:
-                        if cert_year is None or yr_ts.year > cert_year:
-                            cert_year = yr_ts.year
+            for cert in cert_list:
+                if not isinstance(cert, dict):
+                    continue
+                yr = _get(cert, "year")
+                try:
+                    yr_int = int(yr)
+                    if cert_year is None or yr_int > cert_year:
+                        cert_year = yr_int
+                except (ValueError, TypeError):
+                    pass
 
             # Open source / publications
-            has_open_source = bool(
-                _get(candidate, "open_source") or
-                _get(candidate, "github") or
-                _get(candidate, "has_open_source")
-            )
             has_publications = bool(
                 _get(candidate, "publications") or
-                _get(candidate, "has_publications") or
+                _get(profile, "publications") or
                 _get(candidate, "papers")
             )
 
@@ -478,7 +496,7 @@ def extract_features(
 
             record = {
                 "candidate_id": cid,
-                "full_name": str(_get(candidate, "profile", "anonymized_name") or ""),
+                "full_name": full_name,
                 "current_title": current_title,
                 "current_company": current_company,
                 "current_location": current_location,
