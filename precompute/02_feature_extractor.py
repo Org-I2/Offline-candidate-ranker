@@ -461,11 +461,20 @@ def extract_features(
             except (ValueError, TypeError):
                 response_rate = None
 
-            github_score = _get(signals, "github_activity_score")
+            github_score_raw = _get(signals, "github_activity_score")
             try:
-                has_open_source = bool(github_score is not None and float(github_score) > 0)
+                github_activity_score_float = float(github_score_raw) if github_score_raw is not None else None
+                has_open_source = bool(github_activity_score_float is not None and github_activity_score_float > 0)
             except (ValueError, TypeError):
+                github_activity_score_float = None
                 has_open_source = False
+
+            # Notice period (days) — from redrob_signals
+            notice_period_raw = _get(signals, "notice_period_days")
+            try:
+                notice_period_days = float(notice_period_raw) if notice_period_raw is not None else None
+            except (ValueError, TypeError):
+                notice_period_days = None
 
             # Certifications — schema has year as integer directly
             certs = _get(candidate, "certifications") or []
@@ -513,6 +522,8 @@ def extract_features(
                 # Behavioral
                 "platform_last_active_days": platform_active,
                 "recruiter_response_rate": response_rate,
+                "notice_period_days": notice_period_days,
+                "github_activity_score": github_activity_score_float,
                 "certification_count": cert_count,
                 "most_recent_certification_year": cert_year,
                 "has_open_source": has_open_source,

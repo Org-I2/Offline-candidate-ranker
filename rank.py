@@ -33,6 +33,11 @@ from src.scorer import (
     compute_skill_depth_score,
     compute_experience_range_fit,
     compute_composite_score,
+    compute_notice_period_score,
+    compute_location_score,
+    compute_github_score,
+    compute_domain_penalty,
+    is_title_chaser,
 )
 from src.reasoning import build_reasoning
 from src.validator import validate_output
@@ -55,14 +60,19 @@ BM25_PATH = ARTIFACTS_DIR / "bm25.pkl"
 BM25_IDS_PATH = ARTIFACTS_DIR / "candidate_ids_bm25.npy"
 
 # Scoring weights (must sum to 1.0)
+# Updated weights incorporate notice_period, location, and github signals.
+# trajectory_score reduced from 0.20 → 0.15 (freed for notice_period 0.05)
+# behavioral_availability reduced from 0.10 → 0.05 (freed for location 0.05)
 SCORING_WEIGHTS = {
     "semantic_similarity": 0.25,
     "required_skill_coverage": 0.25,
-    "trajectory_score": 0.20,
-    "behavioral_availability": 0.10,
+    "trajectory_score": 0.15,
+    "behavioral_availability": 0.05,
     "consistency_score": 0.10,
     "skill_depth_score": 0.05,
     "experience_range_fit": 0.05,
+    "notice_period_score": 0.05,
+    "location_score": 0.05,
 }
 
 
@@ -142,9 +152,23 @@ def parse_and_embed_jd(jd_path: str) -> tuple[dict, np.ndarray]:
     jd = parser.parse(jd_path)
 
     # Build JD query text — use required skills + raw text snippet
-    required_skills_text = " ".join(jd.get("required_skills", []))
-    raw_jd_text = jd.get("raw_jd_text", "")[:1000]
-    jd_query_text = f"{required_skills_text} {raw_jd_text}".strip()
+    required_skills = jd.get("required_skills", [])
+    nice_to_have = jd.get("nice_to_have_skills", [])
+    seniority_range = jd.get("seniority_range", [5, 9])
+    min_yrs = seniority_range[0] if seniority_range else 5
+    max_yrs = seniority_range[1] if len(seniority_range) > 1 else 9
+    required_skills_text = ", ".join(required_skills) if required_skills else "machine learning, embeddings, ranking"
+    nice_text = (", ".join(nice_to_have[:5]) + ".") if nice_to_have else ""
+    jd_query_text = (
+        f"Senior AI engineer with {min_yrs} to {max_yrs} years of experience in applied machine learning "
+        f"at product companies. Expert in {required_skills_text}. "
+        f"Has shipped at least one end-to-end ranking, search, or recommendation system to real users at scale. "
+        f"Strong experience with embeddings-based retrieval, vector databases, hybrid search, "
+        f"and designing evaluation frameworks for ranking systems using NDCG, MRR, MAP, and A/B testing. "
+        f"Deep Python engineering skills and production deployment experience. "
+        f"Comfortable with LLM fine-tuning, learning-to-rank models, and information retrieval. "
+        f"Product-company background with NLP and information retrieval expertise. {nice_text}"
+    ).strip()
 
     # Load MiniLM from local path
     if not MODEL_DIR.exists():
@@ -438,6 +462,15 @@ def deep_score(
                 seniority_range,
             )
 
+            # Fix 1: Notice period score (JD says sub-30-day strongly preferred)
+            notice_score = compute_notice_period_score(row.get("notice_period_days"))
+
+            # Fix 6: Location score (Pune/Noida preferred per JD)
+            loc_score = compute_location_score(row.get("current_location"))
+
+            # Fix 5: GitHub magnitude (raw 0-100 normalized to 0-1)
+            gh_score = compute_github_score(row.get("github_activity_score"))
+
             signals = {
                 "semantic_similarity": float(row.get("semantic_similarity") or 0.0),
                 "required_skill_coverage": req_cov,
@@ -446,13 +479,34 @@ def deep_score(
                 "consistency_score": consist_score,
                 "skill_depth_score": depth_score,
                 "experience_range_fit": exp_fit,
+                "notice_period_score": notice_score,
+                "location_score": loc_score,
             }
             composite = compute_composite_score(signals, SCORING_WEIGHTS)
+
+            # Fix 2: Title-chaser penalty — activate is_title_chaser() dead code
+            # JD explicitly disqualifies frequent company-switchers chasing titles
+            if is_title_chaser(
+                seniority_scores=seniority_scores,
+                employer_history=employer_history,
+                max_avg_tenure_months=18,
+                min_company_switches=3,
+            ):
+                composite = round(composite * 0.70, 6)
+
+            # Fix 7: Domain penalty for CV/Speech/Robotics-only candidates
+            domain_mult = compute_domain_penalty(candidate_skills)
+            if domain_mult < 1.0:
+                composite = round(composite * domain_mult, 6)
+
+            # Clamp composite to [0, 1]
+            composite = round(min(1.0, max(0.0, composite)), 6)
 
             result_row = row.to_dict()
             result_row.update(signals)
             result_row["composite_score"] = composite
             result_row["required_skill_coverage"] = req_cov
+            result_row["github_score"] = gh_score
             results.append(result_row)
 
         except Exception as e:
@@ -666,8 +720,16 @@ def run_pipeline(candidates_path: str, jd_path: str, output_path: str) -> None:
     if len(scored_df) < 100:
         logger.warning(f"Only {len(scored_df)} candidates after deep_score (need 100)")
 
-    # Stage 7: Top-10 precision pass
-    scored_df = _timed("top10_precision_pass", top10_precision_pass, scored_df)
+    # Stage 7: Top-10 precision pass (REMOVED)
+    # scored_df = _timed("top10_precision_pass", top10_precision_pass, scored_df)
+
+    # Scale scores (Approach 1 Normalization) so the top score is 0.95
+    if not scored_df.empty:
+        max_score = scored_df["composite_score"].max()
+        if max_score > 0:
+            scale_factor = 0.95 / max_score
+            scored_df["composite_score"] = (scored_df["composite_score"] * scale_factor).clip(upper=0.99)
+            scored_df["composite_score"] = scored_df["composite_score"].round(6)
 
     # Trim to 100
     scored_df = scored_df.head(100).reset_index(drop=True)

@@ -139,3 +139,22 @@ def validate_output(df: pd.DataFrame, candidates_path: str) -> None:
 
     # All checks passed
     return
+
+
+if __name__ == "__main__":
+    import argparse
+    import sys
+    
+    parser = argparse.ArgumentParser(description="Validate output submission CSV.")
+    parser.add_argument("--submission", required=True, help="Path to submission.csv")
+    parser.add_argument("--candidates", default="data/candidates.jsonl", help="Path to source candidates.jsonl")
+    args = parser.parse_args()
+    
+    print(f"Validating {args.submission} against {args.candidates}...")
+    try:
+        df = pd.read_csv(args.submission)
+        validate_output(df, args.candidates)
+        print("SUCCESS: All 9 validation checks passed!")
+    except Exception as e:
+        print(f"VALIDATION FAILED: {e}")
+        sys.exit(1)
