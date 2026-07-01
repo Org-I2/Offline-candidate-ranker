@@ -519,8 +519,7 @@ def deep_score(
     scored_df = scored_df.sort_values("composite_score", ascending=False).head(top_k)
 
     logger.info(
-        f"deep_score: top {len(scored_df)} candidates in {time.perf_counter()-t0:.1f}s | "
-        f"top score={scored_df['composite_score'].iloc[0]:.4f}"
+        f"deep_score: top {len(scored_df)} candidates in {time.perf_counter()-t0:.1f}s"
     )
     return scored_df.reset_index(drop=True)
 
@@ -733,6 +732,8 @@ def run_pipeline(candidates_path: str, jd_path: str, output_path: str) -> None:
 
     # Trim to 100
     scored_df = scored_df.head(100).reset_index(drop=True)
+    if not scored_df.empty:
+        logger.info(f"Normalized scores: top={scored_df['composite_score'].max():.4f}, lowest={scored_df['composite_score'].min():.4f}")
 
     # Stage 8: Build reasoning
     scored_df = _timed("build_reasoning_column", build_reasoning_column, scored_df, jd)
