@@ -531,6 +531,17 @@ def extract_features(
             logger.warning(f"Feature extraction failed for candidate {cid}: {e}")
 
     df = pd.DataFrame(records)
+    
+    # Serialize list and dict columns as JSON strings to ensure correct parquet round-trip
+    for col in ["skills_list", "seniority_scores", "employer_history"]:
+        if col in df.columns:
+            df[col] = df[col].apply(json.dumps)
+            
+    if "skill_recency_map" in df.columns:
+        df["skill_recency_map"] = df["skill_recency_map"].apply(
+            lambda x: x if isinstance(x, str) else json.dumps(x)
+        )
+
     out = Path(output_path)
     out.parent.mkdir(parents=True, exist_ok=True)
     df.to_parquet(out, index=False, engine="pyarrow")

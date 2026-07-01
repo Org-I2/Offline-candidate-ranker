@@ -82,6 +82,10 @@
       "listwise ranking",
       "gradient boosting",
       "ltr"
-    ]
+    ],
+    "llm": ["large language models", "gpt", "llama", "mistral", "bert", "transformer", "chatgpt", "openai"],
+    "ranking": ["learning to rank", "ranking system", "ranking evaluation", "reranking", "ltr"],
+    "search": ["information retrieval", "semantic search", "hybrid search", "elasticsearch", "opensearch"],
+    "transformer": ["bert", "roberta", "t5", "gpt", "attention mechanism", "hugging face", "transformers"]
   }
 }

@@ -8,35 +8,30 @@ import datetime
 from typing import Optional
 
 
-def compute_required_skill_coverage(
-    candidate_skills: list,
-    required_skills: list,
-    functional_equivalents: dict,
-) -> float:
-    """
-    For each required skill, check if it or any functional equivalent appears
-    in the candidate's skills_list. Returns fraction covered (0.0–1.0).
-
-    Functional equivalents allow credit: e.g. 'faiss' counts for 'vector database'.
-    """
+def compute_required_skill_coverage(candidate_skills, required_skills, functional_equivalents):
     if not required_skills:
         return 1.0
-    candidate_set = {s.lower().strip() for s in (candidate_skills or [])}
+    
+    def _norm(s):
+        return s.lower().strip().replace("-", " ").replace("_", " ") if isinstance(s, str) else ""
+    
+    candidate_set = {_norm(s) for s in (candidate_skills or []) if s}
+    
     covered = 0
     for skill in required_skills:
-        skill_lower = skill.lower().strip()
-        if skill_lower in candidate_set:
+        skill_norm = _norm(skill)
+        if skill_norm in candidate_set:
             covered += 1
             continue
-        # Check functional equivalents
         equiv_list = (
             functional_equivalents.get(skill)
-            or functional_equivalents.get(skill_lower)
+            or functional_equivalents.get(skill.lower().strip())
             or []
         )
-        equivalents = [e.lower().strip() for e in equiv_list]
+        equivalents = [_norm(e) for e in equiv_list if e]
         if any(eq in candidate_set for eq in equivalents):
             covered += 1
+    
     return covered / len(required_skills)
 
 

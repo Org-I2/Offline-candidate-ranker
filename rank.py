@@ -382,8 +382,13 @@ def deep_score(
     def _get_list(val: Any) -> list:
         if isinstance(val, list):
             return val
-        if val is None or (isinstance(val, float) and np.isnan(val)):
-            return []
+        if isinstance(val, str):
+            try:
+                import json
+                parsed = json.loads(val)
+                return parsed if isinstance(parsed, list) else []
+            except Exception:
+                return []
         return []
 
     def _get_dict(val: Any) -> dict:
@@ -392,7 +397,8 @@ def deep_score(
         if isinstance(val, str):
             try:
                 import json
-                return json.loads(val)
+                parsed = json.loads(val)
+                return parsed if isinstance(parsed, dict) else {}
             except Exception:
                 return {}
         return {}
@@ -409,6 +415,10 @@ def deep_score(
             req_cov = compute_required_skill_coverage(
                 candidate_skills, required_skills, functional_equivalents
             )
+            if len(results) == 0:
+                logger.info(f"First candidate skills sample: {candidate_skills[:10]}")
+                logger.info(f"Required skills: {required_skills}")
+                logger.info(f"Coverage: {req_cov}")
             traj_score = compute_trajectory_score(
                 float(row.get("trajectory_slope") or 0.0),
                 int(row.get("current_seniority") or 3),
@@ -520,6 +530,7 @@ def top10_precision_pass(
         f"top10_precision_pass: {demoted} candidates demoted from top {protect_n} "
         f"(coverage < {coverage_threshold}) in {time.perf_counter()-t0:.1f}s"
     )
+    logger.info(f"Top 10 coverage values: {final_df['required_skill_coverage'].head(10).tolist()}")
     return final_df
 
 
