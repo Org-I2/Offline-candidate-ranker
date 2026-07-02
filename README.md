@@ -16,28 +16,40 @@ Welcome to the **Offline Candidate Ranker**, a highly scalable, explainable AI p
 > <img width="1501" height="844" alt="System Architecture" src="https://github.com/user-attachments/assets/06ccc961-1805-4de2-81f8-fc7b57d94e07" />
 
 
-Our ranking system uses a **three-stage explainable AI pipeline** to ensure accurate, fair, and scalable candidate ranking. By heavily relying on offline pre-computation, we bypass the need for external LLM APIs during runtime, ensuring our pipeline easily processes 100,000+ candidates locally on CPU within the strict 5-minute time limit.
+Our ranking system uses a **seven-stage explainable AI pipeline** to ensure accurate, fair, and scalable candidate ranking. By heavily relying on offline pre-computation, we bypass the need for external LLM APIs during runtime, ensuring our pipeline easily processes 100,000+ candidates locally on CPU within the strict 5-minute time limit.
 
-### Stage 1: Data Normalization & Offline Pre-computation
-When dealing with massive candidate pools, raw data can be deeply nested and inconsistent. 
-1. **Normalization**: The pipeline first flattens the unstructured `candidates.jsonl` into a standard, aliased format using `scripts/normalize_candidates_for_local.py`.
-2. **Artifact Generation**: We run the pre-computation suite (`precompute/run_all.py`), which generates semantic embeddings using a locally-hosted MiniLM model, constructs a high-speed FAISS vector index, and builds a BM25 keyword-matching index. This step is run entirely offline.
+### Stage 1: JD Parsing & Normalization
+Raw job descriptions (`.docx` / `.pdf`) are rarely clean or structured. The pipeline first extracts and cleans the text, detects its underlying structure, and normalizes it into a standard format — turning inconsistent, free-form JDs into a machine-readable schema the rest of the pipeline can trust.
 
-### Stage 2: Multi-Factor Scoring Engine (Ranking)
-During the live 5-minute ranking step (`rank.py`), the shortlisted candidates retrieved by our Hybrid Engine (BM25 + Semantic Vector Search) are evaluated using a dynamic scoring engine. 
+### Stage 2: Requirement Extraction
+From the normalized JD, we extract the discrete signals that actually drive matching: required skills, role & experience level, location, education, and other constraints (salary band, notice period, etc.). This converts a wall of text into structured requirement fields used downstream by the scoring engine.
 
-The engine calculates a `composite_score` by evaluating multiple, weighted real-world signals:
-- **Skills Alignment (25%)**: Semantic overlap between candidate skills and JD requirements.
-- **Experience Relevance (20%)**: Length and applicability of past work history.
-- **Project Quality (15%)**: Signal values parsed from candidate achievements.
-- **Education Match (10%)**: Degree mapping and relevance.
-- **Domain Expertise (10%)**: Years spent in product vs. consulting roles.
-- **AI Reasoning Confidence (10%)**: Quality of the inferred match.
-- **Certification Score (5%)**: Value of validated credentials.
-- **Fraud Risk Adjustment (5%)**: Dynamic penalties for logically contradictory profiles (e.g., claiming 10 years of experience at a company founded 3 years ago).
+### Stage 3: Offline Precomputation Pipeline
+This is where the heavy lifting happens **before** the 5-minute clock starts, using static resources (`seniority_map.json`, `skill_aliases.json`, `company_founding_years.json`, `consulting_firms.json`) alongside the candidate pool:
+1. **Honeypot Detector** (`01_honeypot_detector.py`) — flags fraudulent or logically inconsistent profiles early.
+2. **Feature Extractor** (`02_feature_extractor.py`) — parses candidates into structured, scorable features.
+3. **SentenceTransformer Embeddings** (`03_embedder.py`) — generates semantic embeddings locally, with no external API calls.
+4. **BM25 Index Builder** (`04_build_bm25.py`) — builds a high-speed keyword-matching index.
 
-### Stage 3: Explainable Reasoning
-We do not just output raw numbers. As the final phase of the ranker, the system generates an explainable, 1-2 sentence reasoning report for each of the top 100 candidates. This reasoning explicitly surfaces their strengths and honest gaps based purely on the facts in their profile (e.g., *“Strong NLP background; some concern on notice period (120 days) but otherwise strong fit”*).
+All outputs are cached to disk as reusable artifacts (`honeypot_flags.parquet`, `features.parquet`, `embeddings.npy`, `bm25_index.pkl`), so the live ranking step never re-computes them.
+
+### Stage 4: Matching & Ranking Engine (`rank.py`)
+With requirements extracted and artifacts precomputed, the live ranking step retrieves and scores candidates using a hybrid, multi-factor approach:
+- **Semantic Retrieval** (embedding similarity) + **BM25 Retrieval** (keyword matching) — a hybrid search that catches both conceptual and exact-term matches.
+- **Feature Engineering** — derives signals like experience, stability, and education from the precomputed features.
+- **Heuristic Scoring** — combines everything into a weighted, multi-factor `composite_score`.
+- **Ranking & Tie-Breaking** — applies deterministic business rules to resolve close calls.
+- **Reasoning Generator** — produces the explainable, human-readable justification for each ranked candidate.
+- **Validator** — enforces the top-100 cutoff, correct output format, and final sanity checks before anything is written out.
+
+### Stage 5: Output Generation
+The validated results are written to `submission.csv` — the top 100 ranked candidates, each with their composite score and generated reasoning.
+
+### Stage 6: Streamlit Dashboard (`sandbox/app.py`)
+Recruiters can interactively explore results without touching the underlying data: ranking overview, per-candidate details, reasoning viewer, honeypot filter, feature comparison, and exportable reports.
+
+### Stage 7: Recruiter Outcomes
+The end result: faster screening, explainable rankings, and data-driven shortlisting — leading to reduced hiring bias, higher-quality hires, and audit-ready reports..
 
 ---
 
