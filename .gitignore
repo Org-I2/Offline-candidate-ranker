@@ -15,7 +15,6 @@ models/
 # Generated runtime outputs & artifacts
 artifacts/
 submission.csv
-submission_metadata.yaml
 temp_parsed.json
 
 # IDE configurations
@@ -32,3 +31,12 @@ Thumbs.db
 ehthumbs.db
 Desktop.ini
 .DS_Store
+
+# Data files
+data/candidates.jsonl
+data/candidates.normalized.jsonl
+data/sample_candidates.jsonl
+data/sample_candidates.normalized.jsonl
+data/sample_candidates.json
+*.normalized.jsonl
+
