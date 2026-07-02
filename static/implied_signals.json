@@ -1,0 +1,35 @@
+{
+  "version": "1.0",
+  "implied_signals": {
+    "systems-thinker": [
+      "think\\s+about\\s+systems",
+      "architecture",
+      "long.term",
+      "infrastructure"
+    ],
+    "product-mindset": [
+      "product.*engineer",
+      "user.*metric",
+      "recruiter.*feedback",
+      "learn\\s+from\\s+real\\s+user",
+      "pm\\b"
+    ],
+    "pre-llm-era-ml-experience": [
+      "before.*llm.*fashionable",
+      "pre.llm",
+      "understood\\s+retrieval.*before",
+      "pre-chatgpt"
+    ],
+    "scrappy-executor": [
+      "ship.*week",
+      "working.*even\\s+if.*suboptimal",
+      "move\\s+fast",
+      "scrappy"
+    ],
+    "mentorship-expected": [
+      "mentor",
+      "growing\\s+the\\s+team",
+      "next\\s+round\\s+of\\s+hires"
+    ]
+  }
+}

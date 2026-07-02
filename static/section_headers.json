@@ -1,0 +1,48 @@
+{
+  "version": "1.0",
+  "section_headers": {
+    "required": [
+      "things?\\s+you\\s+absolutely\\s+need",
+      "what\\s+you\\s+absolutely\\s+need",
+      "must\\s+have",
+      "required\\s+skills?",
+      "minimum\\s+qualifications?",
+      "basic\\s+qualifications?",
+      "what\\s+we.re\\s+looking\\s+for",
+      "you\\s+need\\s+to\\s+have",
+      "skills?\\s+inventory",
+      "key\\s+requirements?"
+    ],
+    "preferred": [
+      "things?\\s+we.?d\\s+like",
+      "nice\\s+to\\s+have",
+      "preferred",
+      "bonus",
+      "great\\s+if\\s+you\\s+have",
+      "good\\s+to\\s+have",
+      "ideally",
+      "preferred\\s+qualifications?",
+      "plus\\s+if\\s+you\\s+have"
+    ],
+    "disqualifiers": [
+      "things?\\s+we\\s+explicitly\\s+do\\s+not\\s+want",
+      "not\\s+a\\s+good\\s+fit",
+      "we\\s+are\\s+not\\s+looking",
+      "disqualif"
+    ],
+    "responsibilities": [
+      "what\\s+you.?d\\s+actually\\s+be\\s+doing",
+      "responsibilities",
+      "what\\s+you.ll\\s+do",
+      "the\\s+role",
+      "day\\s+to\\s+day",
+      "your\\s+first\\s+90\\s+days"
+    ],
+    "company": [
+      "about\\s+us",
+      "who\\s+we\\s+are",
+      "the\\s+company",
+      "our\\s+mission"
+    ]
+  }
+}

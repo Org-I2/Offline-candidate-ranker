@@ -7,26 +7,32 @@
 # ============================================================================
 # Team identity
 # ============================================================================
-team_name: "your-team-name-here"  # Used in leaderboard and announcements
+team_name: "Kirmada.exe"  # Used in leaderboard and announcements
 
 primary_contact:
-  name: "Full Name"
-  email: "primary@example.com"   # Used for all organizer communication
-  phone: "+91-XXXXXXXXXX"        # Used for top-50 / top-10 outreach
+  name: "Aniket G. Ambekar"
+  email: "aniketambekar10@gmail.com"   # Used for all organizer communication
+  phone: "+91-9545427061"        # Used for top-50 / top-10 outreach
 
 team_members:
-  - name: "Member 1 Full Name"
-    email: "member1@example.com"
-    role: "ML Engineer"          # Optional, e.g. "Team Lead", "Backend", "Data"
-  - name: "Member 2 Full Name"
-    email: "member2@example.com"
-    role: "Data Engineer"
+  - name: "Aniket G. Ambekar"
+    email: "aniketambekar10@gmail.com"
+    role: "Student"          # Optional, e.g. "Team Lead", "Backend", "Data"
+  - name: "Piyush A. Tiwari"
+    email: "piyushtiwari057@gmail.com"
+    role: "Student"
+  - name: "Rushabh H. Dave"
+    email: "rushabhdave2006@gmail.com"
+    role: "Student"
+  - name: "Pratham S. Tiwari"
+    email: "prathamjee97@gmail.com"
+    role: "Student"
   # Add more members as needed; solo participants list just one member
 
 # ============================================================================
 # Code and reproducibility
 # ============================================================================
-github_repo: "https://github.com/YOUR_USERNAME/YOUR_REPO"
+github_repo: "https://github.com/Org-I2/Offline-candidate-ranker"
 # Required. Must be reachable. Private repos OK if you can grant organizer
 # access at Stage 3 (the email to add will be communicated then).
 

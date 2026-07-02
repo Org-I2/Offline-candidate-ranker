@@ -1,0 +1,31 @@
+{
+  "version": "1.0",
+  "note": "Integer seniority levels for trajectory scoring. Used by feature_extractor for linear regression slope.",
+  "seniority_levels": {
+    "intern": 0,
+    "internship": 0,
+    "trainee": 0,
+    "graduate": 0,
+    "junior": 1,
+    "jr": 1,
+    "entry": 1,
+    "associate": 2,
+    "mid": 3,
+    "engineer": 3,
+    "developer": 3,
+    "analyst": 3,
+    "senior": 4,
+    "sr": 4,
+    "lead": 5,
+    "tech lead": 5,
+    "staff": 5,
+    "principal": 6,
+    "architect": 6,
+    "director": 7,
+    "vp": 8,
+    "chief": 9,
+    "cto": 9,
+    "ceo": 9
+  },
+  "default_level": 3
+}
