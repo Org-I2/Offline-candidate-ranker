@@ -41,7 +41,8 @@ sandbox_link: "https://offline-candidate-ranker-f8fn73ffz2kdeu9fnwz8kj.streamlit
 # candidate sample. See Section 10.5 of submission_spec.md for acceptable
 # platforms (HuggingFace Spaces, Streamlit Cloud, Replit, Colab, Docker, Binder).
 
-reproduce_command: "python rank.py --candidates ./candidates.jsonl --out ./submission.csv"
+reproduce_command: "python rank.py --candidates ./data/candidates.normalized.jsonl --jd ./data/job_description.docx --out ./submission.csv"
+# NOTE:- The above command is only for the generation of csv file from the normalized candidates.jsonl file, but precomputing command should be executed first. For that please refer to the README.md file in the repo.
 # The single command that produces submission.csv from candidates.jsonl.
 # Should run end-to-end within 5 minutes on CPU with 16GB RAM and no network.
 

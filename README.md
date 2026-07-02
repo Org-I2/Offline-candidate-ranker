@@ -1,243 +1,135 @@
-# Offline Candidate Ranker
+# Offline Candidate Ranker — Team Kirmada.exe
 
-A production-grade, highly optimized offline pipeline designed to ingest resume candidate profiles (in JSON Lines format), identify malicious or fake ("honeypot") candidates, parse a job description (JD) docx/pdf, extract structured features, compute semantic/TF-IDF alignment scores, and generate an engineered ranking submission.
-
-Includes a Streamlit dashboard sandbox for visual evaluation of rankings, explanation reasoning, and honeypot flags.
+Welcome to the **Offline Candidate Ranker**, a highly scalable, explainable AI pipeline designed to identify the top 100 best-fit candidates from a massive talent pool. This repository is our official submission for the Redrob Hackathon v4.
 
 ---
 
-## ⚡ Quick Start: 3-Minute Overview for First-Time Readers
+## 🎥 Demonstration Video
+> **[Insert Video Demonstration Link Here]**
 
-If you are new to this repository, here is the essential context to help you understand the project instantly:
-
-### What does this project do?
-This is an **AI-powered candidate screening and ranking system**. When given a **Job Description** (in `.docx` format) and a list of **Candidates** (in `.jsonl` format), it processes and scores candidates based on experience, skill alignment, seniority, profile completeness, and job stability. It ranks them and outputs the top 100 in `submission.csv` with a detailed written explanation ("reasoning") for each selection.
-
-### What files do I need to care about?
-* **Input Data**: `"<Your Path to the folder>\Offline-candidate-ranker\data\candidates.jsonl"` (candidate database) and `"<Your Path to the folder>\Offline-candidate-ranker\data\job_description.docx"` (requirements).
-* **Generated Output**: `"<Your Path to the folder>\Offline-candidate-ranker\submission.csv"` (the final Top 100 ranks).
-* **The Main Engine**: `"<Your Path to the folder>\Offline-candidate-ranker\rank.py"` (computes the final scores and generates the output).
-
-### How do I run it?
-You do not need to wait for heavy computations to finish during scoring. The project splits calculations into **two simple commands**:
-
-1. **Precompute (Step 1)**: Runs once. Filters fake candidates, extracts features, and builds semantic embeddings + BM25 search indices. Caches these under `artifacts/`.
-   ```powershell
-   python precompute/run_all.py --candidates ./data/candidates.jsonl --jd ./data/job_description.docx
-   ```
-2. **Rank (Step 2)**: Runs anytime. Instantly uses the cached `artifacts/` to score and rank candidates against the Job Description in seconds.
-   ```powershell
-   python rank.py --candidates ./data/candidates.jsonl --jd ./data/job_description.docx --out ./submission.csv
-   ```
+## 🌐 Live Sandbox (Streamlit)
+> **[Experience the Offline Candidate Ranker Live](https://offline-candidate-ranker-f8fn73ffz2kdeu9fnwz8kj.streamlit.app/)**
 
 ---
 
-## Table of Contents
-1. [System Architecture Overview](#system-architecture-overview)
-2. [Folder & Directory Structure](#folder--directory-structure)
-3. [Core Pipeline Components](#core-pipeline-components)
-    - [Precomputation Pipeline (`precompute/`)](#1-precomputation-pipeline-precompute)
-    - [Core Ranking Logic (`src/`)](#2-core-ranking-logic-src)
-    - [Streamlit Verification Sandbox (`sandbox/`)](#3-streamlit-verification-sandbox-sandbox)
-4. [Honeypot Detection Rules](#honeypot-detection-rules)
-5. [Scoring & Ranking Engine Heuristics](#scoring--ranking-engine-heuristics)
-6. [Local Environment Setup](#local-environment-setup)
-7. [Running the Pipeline](#running-the-pipeline)
-8. [Testing & Verification](#testing--verification)
+## 🏗️ System Architecture & Diagram
+> **[Insert Architecture Diagram Image Here]**
+
+Our ranking system uses a **three-stage explainable AI pipeline** to ensure accurate, fair, and scalable candidate ranking. By heavily relying on offline pre-computation, we bypass the need for external LLM APIs during runtime, ensuring our pipeline easily processes 100,000+ candidates locally on CPU within the strict 5-minute time limit.
+
+### Stage 1: Data Normalization & Offline Pre-computation
+When dealing with massive candidate pools, raw data can be deeply nested and inconsistent. 
+1. **Normalization**: The pipeline first flattens the unstructured `candidates.jsonl` into a standard, aliased format using `scripts/normalize_candidates_for_local.py`.
+2. **Artifact Generation**: We run the pre-computation suite (`precompute/run_all.py`), which generates semantic embeddings using a locally-hosted MiniLM model, constructs a high-speed FAISS vector index, and builds a BM25 keyword-matching index. This step is run entirely offline.
+
+### Stage 2: Multi-Factor Scoring Engine (Ranking)
+During the live 5-minute ranking step (`rank.py`), the shortlisted candidates retrieved by our Hybrid Engine (BM25 + Semantic Vector Search) are evaluated using a dynamic scoring engine. 
+
+The engine calculates a `composite_score` by evaluating multiple, weighted real-world signals:
+- **Skills Alignment (25%)**: Semantic overlap between candidate skills and JD requirements.
+- **Experience Relevance (20%)**: Length and applicability of past work history.
+- **Project Quality (15%)**: Signal values parsed from candidate achievements.
+- **Education Match (10%)**: Degree mapping and relevance.
+- **Domain Expertise (10%)**: Years spent in product vs. consulting roles.
+- **AI Reasoning Confidence (10%)**: Quality of the inferred match.
+- **Certification Score (5%)**: Value of validated credentials.
+- **Fraud Risk Adjustment (5%)**: Dynamic penalties for logically contradictory profiles (e.g., claiming 10 years of experience at a company founded 3 years ago).
+
+### Stage 3: Explainable Reasoning
+We do not just output raw numbers. As the final phase of the ranker, the system generates an explainable, 1-2 sentence reasoning report for each of the top 100 candidates. This reasoning explicitly surfaces their strengths and honest gaps based purely on the facts in their profile (e.g., *“Strong NLP background; some concern on notice period (120 days) but otherwise strong fit”*).
 
 ---
 
-## System Architecture Overview
-
-The system is split into **three major stages** to minimize runtime computational overhead and maximize throughput:
-
-```mermaid
-graph TD
-    A[candidates.jsonl] --> B[precompute/run_all.py]
-    A_JD[job_description.docx] --> B
-    
-    subgraph Precomputation
-        B --> B1[01_honeypot_detector.py]
-        B --> B2[02_feature_extractor.py]
-        B --> B3[03_embedder.py]
-        B --> B4[04_build_bm25.py]
-    end
-    
-    B1 --> F_Flags[honeypot_flags.parquet]
-    B2 --> F_Feats[features.parquet]
-    B3 --> F_Embs[embeddings.npy]
-    B4 --> F_BM25[bm25_index.pkl]
-
-    F_Flags --> C[rank.py]
-    F_Feats --> C
-    F_Embs --> C
-    F_BM25 --> C
-    A_JD --> C
-    
-    subgraph Scoring & Inference
-        C --> C1[JD Parser & Normalizer]
-        C --> C2[Scorer & Heuristic Engine]
-        C --> C3[Reasoning Generator]
-    end
-    
-    C3 --> Out[submission.csv]
-    Out --> D[validate_output.py]
-    Out --> E[Streamlit Dashboard app.py]
-```
-
-1. **Precomputation Pipeline (`precompute/`)**: Computes expensive features offline (static rules, text cleaning, SentenceTransformer embeddings, and BM25 database construction) and caches them in binary/parquet format under the `artifacts/` folder.
-2. **Inference Scorer & Ranker (`rank.py`)**: Runs fast logic on top of the precomputed parquet tables. It parses the incoming Job Description (JD), matches raw requirements against candidate candidate features, computes a multi-faceted alignment score, handles tiebreaks, and structures the ranking report.
-3. **Sandbox App (`sandbox/app.py`)**: A Streamlit application permitting real-time exploration of candidate matches, filtering candidates based on honeypot flags, inspecting raw vs normalized features, and viewing structured LLM-style reasoning descriptions explaining why a candidate ranked where they did.
-
----
-
-## Folder & Directory Structure
-
-```directory
+## 📁 Repository Structure
+```text
 Offline-candidate-ranker/
-├── data/                               # Sample raw data (candidates.jsonl, job_description.docx)
-├── static/                             # Hardcoded mapping files
-│   ├── company_founding_years.json     # Founding years for validating resume tenure
-│   ├── seniority_map.json              # Integer ranks mapped to corporate titles
-│   ├── skill_aliases.json              # Normalization maps (e.g. "js" -> "javascript")
-│   └── consulting_firms.json           # Names of consulting services for filtering
-├── precompute/                         # Step-by-step offline calculations
-│   ├── 01_honeypot_detector.py         # Flagging suspicious profiles
-│   ├── 02_feature_extractor.py         # Experience, timeline, and education parsing
-│   ├── 03_embedder.py                  # Generating MiniLM semantic embeddings
-│   ├── 04_build_bm25.py                # Fitting Okapi BM25 on profile text
-│   ├── run_all.py                      # Orchestrator running steps 1-4 sequentially
-│   └── __init__.py
-├── src/                                # Core scorer and parser definitions
-│   ├── jd_parser.py                    # Extractor parsing word documents for skills & roles
-│   ├── scorer.py                       # Match calculator (Semantic + Heuristic + Rules)
-│   ├── reasoning.py                    # Auto-generated textual justifications for ranking
-│   └── validator.py                    # Post-processing schema validation checks
-├── sandbox/                            # Interactive visualization
-│   └── app.py                          # Streamlit inspection tool
-├── tests/                              # Pytest test suite
-│   ├── test_honeypot_detector.py       # Unit tests verifying fraud rules
-│   ├── test_jd_parser.py               # Unit tests checking word document parsing
-│   ├── test_scorer.py                  # Unit tests for weighting equations
-│   └── test_validator.py               # Schema compliance tests
-├── run_all.ps1                         # PowerShell pipeline wrapper script
-├── rank.py                             # Core pipeline entrypoint
-├── validate_output.py                  # Format checks on output submissions
-├── requirements.txt                    # Project dependencies
-└── README.md                           # Documentation
+├── artifacts/             # Pre-computed outputs (FAISS indexes, BM25 pickles, embeddings)
+├── data/                  # Input data folder (candidates.jsonl, job_description.docx)
+├── models/                # Locally cached model weights (e.g., sentence-transformers)
+├── precompute/            # Offline phase scripts
+│   ├── 01_honeypot_detector.py
+│   ├── 02_feature_extractor.py
+│   ├── 03_embed_and_index.py
+│   ├── 04_build_bm25.py
+│   └── run_all.py         # Orchestrates the pre-computation pipeline
+├── scripts/               # Utilities (normalization, sample data generation)
+├── src/                   # Core Python modules
+│   ├── jd_parser.py       # Job description extraction
+│   ├── reasoning.py       # Explainable output generator
+│   ├── scorer.py          # Multi-factor weighting logic
+│   └── validator.py       # Strict output validation enforcing Hackathon rules
+├── static/                # Static lookups (company_founding_years.json)
+├── tests/                 # Comprehensive PyTest suite
+├── rank.py                # Main ranking script (The 5-minute bounded step)
+├── run_all.ps1            # 1-click execution script for the entire workflow
+├── validate_output.py     # Final verification script for submission.csv
+└── README.md              # You are here!
 ```
 
 ---
 
-## Core Pipeline Components
+## 🚀 How to Run the Pipeline
 
-### 1. Precomputation Pipeline (`precompute/`)
-Running `python precompute/run_all.py` kicks off:
-- **`01_honeypot_detector.py`**: Reads raw candidate profiles, applies deterministic heuristic fraud filters, and saves a binary parquet file identifying flagged profiles.
-- **`02_feature_extractor.py`**: Computes career tenure (in months), average role stability, seniority index, trajectory direction (ascending/descending seniority slope using linear regression on titles), profile completion density, and flags candidate experience types (such as "has product company background" or "consulting only").
-- **`03_embedder.py`**: Encodes the normalized candidate profile text using a locally saved SentenceTransformer MiniLM model, storing raw vectors to `embeddings.npy`.
-- **`04_build_bm25.py`**: Builds and caches a BM25 index on candidate skills and summaries to allow fast lexicon retrieval matching against JDs at runtime.
+Our code is heavily optimized to run locally on a 16GB CPU machine, completing the final ranking phase comfortably within the 5-minute limit.
 
-### 2. Core Ranking Logic (`src/`)
-At runtime, execution runs through `rank.py`:
-- **JD Parser (`src/jd_parser.py`)**: Ingests `.docx` or `.pdf` JDs, extracting necessary skills (categorized into essential, preferred, and optional tools), target years of experience, and desired education credentials.
-- **Scorer (`src/scorer.py`)**: Merges the candidate's semantic alignment score (cosine similarity of embedding to JD description) and BM25 token score with structural heuristic modifiers (adjustments for seniority alignment, role stability, and target years of experience).
-- **Reasoning Engine (`src/reasoning.py`)**: Dynamically writes structural explanation paragraphs for each candidate detailing strengths (e.g. high skill overlap, ascending career trajectory) and potential weaknesses (e.g. low stability, missing critical tools).
-- **Validator (`src/validator.py` / `validate_output.py`)**: Runs defensive checks confirming the final CSV contains exactly the right columns, unique index keys, and structured ranking orders.
+### Setup & Requirements
+Before running the pipeline, ensure you have Python 3.12+ installed. 
 
-### 3. Streamlit Verification Sandbox (`sandbox/`)
-Allows stakeholders to:
-- Visually evaluate the ranked leaderboards.
-- Inspect detailed feature grids (tenure, title progression slopes).
-- Review exact honeypot reasons (e.g. started working before company founding year).
-- Test how adjustments in weight configs change overall ranking positions in real-time.
+Create and activate your virtual environment:
+```powershell
+python -m venv venv
+.\venv\Scripts\Activate.ps1
+```
 
----
+Install the dependencies:
+```powershell
+pip install -r requirements.txt
+```
 
-## Honeypot Detection Rules
-
-The honeypot detector runs 6 robust verification checks. If any check fails, the candidate's `honeypot_score` is marked as `1` and they are excluded from final ranking considerations:
-
-1. **Company Tenure vs Founding**: Start date of a job role precedes the founding year of the employer (validated via `static/company_founding_years.json`).
-2. **Expert with Zero Years**: Candidate claims "Expert", "Master", or "5/5" proficiency in a skill but lists `years_used` as `0` or `null`.
-3. **Job Before Graduation**: Candidate started a full-time role more than 12 months before completing their bachelor's/undergrad degree.
-4. **Experience vs Career Span**: Self-reported total years of experience exceeds their actual career span (Current Date minus earliest job start date) by more than 2 years.
-5. **Implausible Skill Breadth**: Candidate lists more than 15 skills but has a calculated career span of less than 3 years.
-6. **Duplicate Profile Identification**: Detects near-exact duplicate entries using MD5 hashes of combinations of `name`, `current_employer`, and `current_title`.
-
----
-
-## Scoring & Ranking Engine Heuristics
-
-The candidate score is calculated using an ensemble of semantic match metrics and experience qualifiers:
-
-$$\text{Score} = w_{\text{semantic}} \cdot S_{\text{semantic}} + w_{\text{bm25}} \cdot S_{\text{bm25}} + \text{Heuristic Modifiers}$$
-
-Heuristic modifiers include:
-* **Seniority Alignment Penalty**: Measures difference between the candidate's calculated seniority level and the JD target level.
-* **Years of Experience Match**: Applies a log-based penalty if a candidate has fewer years of experience than requested by the JD.
-* **Job Stability Bonus**: Positively weights candidates with longer average role tenures (lowering rank for candidates with frequent job-hopping).
-* **Trajectory Slope Modifier**: Rewards candidates with positive progression trajectories (e.g. rising from Junior Developer to Senior Lead).
-* **Product vs Consulting adjustments**: Applies configured boosts for product company backgrounds where relevant.
-
----
-
-## Local Environment Setup
-
-Ensure you have Python 3.10+ installed.
-
-1. **Clone the Repository and Navigate to Root**:
-    ```powershell
-    cd "<Your Path to the folder>\Offline-candidate-ranker"
-    ```
-
-2. **Set up Virtual Environment**:
-    ```powershell
-    python -m venv .venv
-    .\.venv\Scripts\Activate.ps1
-    ```
-
-3. **Install Dependencies**:
-    ```powershell
-    pip install -r requirements.txt
-    ```
-
----
-
-## Running the Pipeline
-
-You can run the entire pipeline workflow sequentially via the automated PowerShell script:
+### Option 1: The Automated Way (Recommended)
+We have included a convenient PowerShell script that manages the entire pipeline end-to-end. It will automatically handle the data normalization, pre-computation, ranking, validation, and testing.
 
 ```powershell
-Set-ExecutionPolicy Bypass -Scope Process
-.\run_all.ps1
+powershell -ExecutionPolicy Bypass -File .\run_all.ps1 -CandidatesFile ".\data\candidates.jsonl" -JdFile ".\data\job_description.docx"
+```
+*(If the `CandidatesFile` is not found, the script will instantly fail safely rather than overwriting your data.)*
+
+### Option 2: Running Individual Commands Step-by-Step
+If you prefer to see exactly what is happening under the hood, you can run the pipeline sequentially:
+
+**1. Data Normalization**
+Flattens and normalizes the deeply nested raw candidate JSON file so our scripts can process it cleanly.
+```bash
+python scripts/normalize_candidates_for_local.py --input ./data/candidates.jsonl --output ./data/candidates.normalized.jsonl
 ```
 
-Or execute the scripts manually:
+**2. Pre-computing Artifacts (Offline Phase)**
+This step extracts features, generates embeddings, and builds the FAISS/BM25 indexes. 
+*(Note: This offline step may take ~27 minutes on a full 100k dataset).*
+```bash
+python precompute/run_all.py --candidates ./data/candidates.normalized.jsonl --jd ./data/job_description.docx
+```
 
-```powershell
-# 1. Download/Cache MiniLM Model
-python -c "from sentence_transformers import SentenceTransformer; SentenceTransformer('sentence-transformers/all-MiniLM-L6-v2').save('models/minilm')"
+**3. Running the Ranker (5-Minute bounded step)**
+This is the main ranking step that executes the multi-factor scoring engine on the pre-computed artifacts, outputting the top 100 candidates into `submission.csv`.
+```bash
+python rank.py --candidates ./data/candidates.normalized.jsonl --jd ./data/job_description.docx --out ./submission.csv
+```
 
-# 2. Run Precomputations
-python precompute/run_all.py --candidates ./data/candidates.jsonl --jd ./data/job_description.docx
+**4. Validating the Output**
+Ensures the generated CSV perfectly matches the strict hackathon formatting rules (exactly 100 rows, monotonically decreasing scores, valid IDs).
+```bash
+python validate_output.py --submission ./submission.csv --candidates ./data/candidates.normalized.jsonl
+```
 
-# 3. Compute Scores and Rank Candidates
-python rank.py --candidates ./data/candidates.jsonl --jd ./data/job_description.docx --out ./submission.csv
-
-# 4. Validate output shape and formatting
-python validate_output.py --submission ./submission.csv --candidates ./data/candidates.jsonl
-
-# 5. Run the interactive Streamlit dashboard
-streamlit run sandbox/app.py
+**5. Final Hackathon Submission Validation**
+Runs the final standalone script to double-check that your output matches the final server-side submission criteria.
+```bash
+python validate_submission.py ./submission.csv
 ```
 
 ---
 
-## Testing & Verification
-
-The suite includes 95+ unit tests covering data validation, parser output stability, and scoring constraints:
-
-```powershell
-pytest tests/ -v
-```
+### AI Usage Declaration
+We utilized AI coding assistants strictly for accelerating local development, standardizing data schemas, and automating repetitive coding tasks. 
+**No candidate data is sent to external LLM APIs.** All embeddings, scoring algorithms, and ranking inference take place 100% locally on CPU to strictly adhere to the compute limits and data privacy requirements of the competition. 
