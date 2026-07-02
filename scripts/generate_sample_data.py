@@ -202,7 +202,7 @@ def _make_candidate(idx: int) -> dict:
 
 def main() -> None:
     OUTPUT_PATH.parent.mkdir(parents=True, exist_ok=True)
-    n = 200
+    n = 100000
     print(f"Generating {n} synthetic candidates -> {OUTPUT_PATH}")
     with open(OUTPUT_PATH, "w", encoding="utf-8") as f:
         for i in range(n):

@@ -25,8 +25,8 @@ def validate_output(df: pd.DataFrame, candidates_path: str) -> None:
 
     # Check 1: Exactly 100 rows
     if len(df) != 100:
-        print(
-            f"WARNING: Check 1 FAILED: Expected exactly 100 rows, got {len(df)}. "
+        raise ValueError(
+            f"Check 1 FAILED: Expected exactly 100 rows, got {len(df)}. "
             f"This is expected if your candidate pool is very small (like a sample file)."
         )
 
@@ -91,8 +91,8 @@ def validate_output(df: pd.DataFrame, candidates_path: str) -> None:
     submission_ids = set(df["candidate_id"].astype(str))
     unknown_ids = submission_ids - source_ids
     if unknown_ids:
-        print(
-            f"WARNING: Check 5 FAILED: {len(unknown_ids)} candidate_id(s) not found in source file "
+        raise ValueError(
+            f"Check 5 FAILED: {len(unknown_ids)} candidate_id(s) not found in source file "
             f"({candidates_path}). This happens if you pass a sample file but loaded artifacts from the full file."
         )
 

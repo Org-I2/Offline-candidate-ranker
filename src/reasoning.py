@@ -133,6 +133,20 @@ def _clause_location(row: dict) -> tuple[str, float] | None:
 # Main builder (Dynamic NLG Engine)
 # ---------------------------------------------------------------------------
 
+def _clause_skill_gap(candidate_row: dict, jd: dict) -> tuple[str, float] | None:
+    """Returns a gap clause when required skill coverage is low (< 0.5)."""
+    coverage = _get(candidate_row, "required_skill_coverage", 1.0)
+    required_skills = _get(jd, "required_skills") or []
+    skills_list = _get_list(candidate_row, "skills_list")
+    if coverage is None or coverage >= 0.5 or not required_skills:
+        return None
+    missing = [s for s in required_skills if s.lower() not in [x.lower() for x in skills_list]]
+    if not missing:
+        return None
+    sample = ", ".join(missing[:2])
+    return (f"a gap in key required skills (missing: {sample})", -1.0)  # negative score so it sorts last
+
+
 def build_reasoning(candidate_row: dict, jd: dict, rank: int) -> str:
     strength_candidates = [
         _clause_ascending_trajectory(candidate_row),
@@ -152,13 +166,20 @@ def build_reasoning(candidate_row: dict, jd: dict, rank: int) -> str:
     ]
     strengths.sort(key=lambda x: x[1], reverse=True)
 
+    # Build gap clause for low coverage candidates
+    coverage = _get(candidate_row, "required_skill_coverage", 1.0) or 0.0
+    gap_clause = _clause_skill_gap(candidate_row, jd)
+
     cid = _get(candidate_row, 'candidate_id') or str(rank)
     h = int(hashlib.md5(cid.encode('utf-8')).hexdigest(), 16)
     rng = random.Random(h)
     
     full_name = _get(candidate_row, "full_name") or _get(candidate_row, "name") or f"Candidate {cid}"
     # Use full name to guarantee uniqueness for the validator check
-    name = full_name.title() if full_name else f"Candidate {cid}"
+    # Use smart title-casing that preserves all-caps acronyms (e.g. ML, AI, NLP)
+    def _smart_title(s: str) -> str:
+        return " ".join(w if w.isupper() else w.capitalize() for w in s.split())
+    name = _smart_title(full_name) if full_name else f"Candidate {cid}"
 
     years_exp = _get(candidate_row, "total_years_exp_computed") or _get(candidate_row, "years_of_experience") or 0.0
 
@@ -167,7 +188,8 @@ def build_reasoning(candidate_row: dict, jd: dict, rank: int) -> str:
 
     # Determine core metrics for prefix
     title = _get(candidate_row, "current_title") or "Professional"
-    title = title.title()
+    # Smart title-case: preserve all-caps acronyms (ML, AI, NLP, etc.)
+    title = _smart_title(title)
     skills_count = _get(candidate_row, "skill_count") or len(_get_list(candidate_row, "skills_list"))
     response_rate = _get(candidate_row, "recruiter_response_rate")
     response_str = f"; response rate {float(response_rate):.2f}" if response_rate is not None else ""
@@ -185,7 +207,7 @@ def build_reasoning(candidate_row: dict, jd: dict, rank: int) -> str:
             f"With {s1}, {name} also brings {s2} to the table.",
             f"{name} is a strong match featuring {s1}, {rng.choice(connectors)} {s2}."
         ]
-        return prefix + rng.choice(templates)
+        body = rng.choice(templates)
         
     elif len(strengths) == 1:
         s1 = strengths[0][0]
@@ -194,7 +216,7 @@ def build_reasoning(candidate_row: dict, jd: dict, rank: int) -> str:
             f"A notable strength for {name} is {s1}.",
             f"{name} is highlighted by {s1}."
         ]
-        return prefix + rng.choice(templates)
+        body = rng.choice(templates)
         
     else:
         templates = [
@@ -202,4 +224,12 @@ def build_reasoning(candidate_row: dict, jd: dict, rank: int) -> str:
             f"{name} brings a broad background to the table.",
             f"{name} is a reliable profile featuring industry experience."
         ]
-        return prefix + rng.choice(templates)
+        body = rng.choice(templates)
+
+    # Append gap language for low coverage candidates (coverage < 0.5)
+    if gap_clause is not None:
+        gap_text = gap_clause[0]
+        body = body + f" Note: {gap_text}."
+
+    return prefix + body
+

@@ -436,12 +436,12 @@ def extract_features(
                 for year in skill_recency.values()
             ) if skill_recency else False
 
-            # Identity — nested under profile
+            # Identity
             profile = _get(candidate, "profile") or {}
-            full_name = str(_get(profile, "anonymized_name") or "")
-            current_title = str(_get(profile, "current_title") or "")
-            current_company = str(_get(profile, "current_company") or "")
-            current_location = str(_get(profile, "location") or "")
+            full_name = str(_get(profile, "anonymized_name") or _get(candidate, "full_name") or _get(candidate, "name") or "")
+            current_title = str(_get(profile, "current_title") or _get(candidate, "current_title") or "")
+            current_company = str(_get(profile, "current_company") or _get(candidate, "current_company") or "")
+            current_location = str(_get(profile, "location") or _get(candidate, "current_location") or "")
 
             company_feats = _compute_company_features(roles, consulting_firms)
 
