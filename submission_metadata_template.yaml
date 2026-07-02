@@ -36,7 +36,7 @@ github_repo: "https://github.com/Org-I2/Offline-candidate-ranker"
 # Required. Must be reachable. Private repos OK if you can grant organizer
 # access at Stage 3 (the email to add will be communicated then).
 
-sandbox_link: "https://huggingface.co/spaces/YOUR_USERNAME/redrob-ranker"
+sandbox_link: "https://offline-candidate-ranker-f8fn73ffz2kdeu9fnwz8kj.streamlit.app/"
 # Required. A working hosted environment where the ranker can be run on a small
 # candidate sample. See Section 10.5 of submission_spec.md for acceptable
 # platforms (HuggingFace Spaces, Streamlit Cloud, Replit, Colab, Docker, Binder).
@@ -49,15 +49,15 @@ reproduce_command: "python rank.py --candidates ./candidates.jsonl --out ./submi
 # Compute environment
 # ============================================================================
 compute:
-  platform: "MacBook Pro M2"                    # Or: "AWS EC2 c5.4xlarge", "Local Linux box", etc.
-  cpu_cores: 8                                  # Number of CPU cores used
+  platform: "HP Victus"                      # Or: "AWS EC2 c5.4xlarge", "Local Linux box", etc.
+  cpu_cores:  10                                 # Number of CPU cores used
   ram_gb: 16                                    # Available RAM in GB
-  python_version: "3.11.4"                      # python --version
-  os: "macOS 14.2"                              # Or "Ubuntu 22.04 LTS", etc.
+  python_version: "3.12.10"                      # python --version
+  os: "windows 11"                              # Or "Ubuntu 22.04 LTS", etc.
   uses_gpu_for_inference: false                 # Must be false — see compute constraints
   has_network_during_ranking: false             # Must be false — no API calls during ranking
   pre_computation_required: false               # true if you pre-compute embeddings or train models offline
-  pre_computation_time_minutes: 0               # Approximate, if applicable
+  pre_computation_time_minutes: 27               # Approximate, if applicable
 
 # ============================================================================
 # AI tools declaration
@@ -65,31 +65,53 @@ compute:
 # Transparency only — declared use is NOT penalized. Be honest. Stage 5 interview
 # may verify these declarations against your code; declarations that contradict
 # your code or your interview are flagged.
-ai_tools_used:
-  - "Claude"        # e.g. for architecture discussion, code review
-  - "GitHub Copilot"  # e.g. for autocomplete
-  # Other options: "ChatGPT", "Cursor", "Gemini", "Codeium", "Other", "None"
+ai_tools_used:       
+  - "Gemini"              # e.g. for architecture discussion, code review
+  - "Antigravity Agent"   # e.g. for architecture discussion, code review
+  - "Codex"               # e.g. for architecture discussion, code review
 
 ai_usage_summary: |
-  Briefly describe how AI tools were used. Examples:
-  - "Used Claude for code review and architectural discussion. Used Copilot for autocomplete.
-     No candidate data was fed to any LLM."
-  - "Used ChatGPT to debug Python issues and Cursor for refactoring."
-  - "No AI tools used."
+  Used Gemini as an agentic AI engineering assistant to accelerate development, 
+  streamline the alignment between the local CLI pipeline and the Streamlit web 
+  sandbox, and improve overall engineering productivity. Specifically, Gemini 
+  assisted in implementing the candidate data normalization script 
+  (`normalize_candidates_for_local.py`) to systematically map nested fields 
+  (such as anonymized names, locations, and employment durations) into the 
+  flattened aliases required by the precompute pipeline. It was also leveraged 
+  to troubleshoot local environment issues, resolve dependency and configuration 
+  challenges, optimize development workflows, and automate repetitive engineering 
+  tasks such as code refinement, validation, and testing. Additionally, Gemini 
+  assisted in executing and verifying the complete pipeline 
+  (`precompute/run_all.py` and `rank.py`) to ensure schema consistency, correct 
+  data flow, and reproducible outputs. All architectural decisions, feature engineering, 
+  ranking methodology, and implementation were designed, reviewed, and validated by our 
+  team. No candidate data was uploaded to or processed by external LLM services; all 
+  preprocessing, embedding generation, scoring, and model inference were performed entirely 
+  within the local environment in accordance with the competition constraints.
+
 
 # ============================================================================
 # Approach summary (optional but recommended)
 # ============================================================================
 methodology_summary: |
-  ≤200 word summary of your approach. Strongly recommended.
 
-  Example:
-  "Rule-based ranker with explicit reasoning capture. Five scoring components
-  (skills, title+career, experience years, location, education) combined with
-  a multiplicative behavioral-signal modifier. The title component is the
-  decisive signal against keyword-stuffer traps; an endorsement-and-duration
-  trust multiplier on skills catches lazy keyword stuffing. Runtime is ~10
-  seconds for 50K candidates on CPU."
+  Our ranking methodology follows a three-stage, explainable AI pipeline designed 
+  to accurately identify and rank the most suitable candidates for a given job 
+  description while ensuring transparency and reproducibility. In the first stage, 
+  a hybrid retrieval engine combines BM25 keyword search with semantic vector search 
+  to efficiently retrieve the most relevant candidate profiles based on semantic 
+  similarity, skill alignment, experience relevance, keyword overlap, and domain 
+  expertise. The shortlisted candidates are then evaluated using a weighted multi-factor 
+  scoring engine that assigns importance to Skills Alignment (25%), Experience Relevance (20%), 
+  Project Quality (15%), Education Match (10%), Domain Expertise (10%), AI Reasoning Confidence (10%), 
+  Certification Score (5%), and Fraud Risk Adjustment (5%). These weighted signals are 
+  aggregated to generate a comprehensive match score that balances technical expertise, 
+  practical experience, educational background, and candidate credibility. Finally, candidates 
+  are ranked according to their composite scores, with each recommendation accompanied by a 
+  confidence score, fraud status, and an explainable reasoning report. This methodology delivers 
+  an interpretable, scalable, and production-ready ranking system that enables recruiters to make 
+  faster, data-driven hiring decisions while maintaining fairness, consistency, and trust in the 
+  selection process.
 
 # ============================================================================
 # Declarations
@@ -98,5 +120,5 @@ declarations:
   read_submission_spec: true        # I have read submission_spec.md in full
   code_is_original_work: true       # My code is my team's original work (using AI as a tool is fine)
   no_collusion: true                # I have not coordinated my submission with other teams
-  honeypot_check_done: false        # OPTIONAL — set true if you explicitly checked for honeypots in your ranking
+  honeypot_check_done: true        # OPTIONAL — set true if you explicitly checked for honeypots in your ranking
   reproduction_tested: true         # I have tested that my reproduce_command runs end-to-end
