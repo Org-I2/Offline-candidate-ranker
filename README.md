@@ -5,7 +5,12 @@ Welcome to the **Offline Candidate Ranker**, a highly scalable, explainable AI p
 ---
 
 ## 🎥 Demonstration Video
-> **[Insert Video Demonstration Link Here]**
+> 
+https://github.com/user-attachments/assets/1c40084a-e4e5-46e0-801a-832bae1aad04
+
+
+
+
 
 ## 🌐 Live Sandbox (Streamlit)
 > **[Experience the Offline Candidate Ranker Live](https://offline-candidate-ranker-f8fn73ffz2kdeu9fnwz8kj.streamlit.app/)**
