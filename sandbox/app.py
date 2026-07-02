@@ -286,18 +286,13 @@ def _write_jsonl(path: Path, records: list[dict]) -> None:
             f.write(json.dumps(record, ensure_ascii=False) + "\n")
 
 
-def _write_jd_input(tmpdir: Path, jd_text: str, jd_upload: Any | None) -> tuple[Path, str]:
-    if jd_upload is not None:
-        suffix = Path(jd_upload.name or "").suffix.lower()
-        if suffix not in {".docx", ".pdf", ".txt"}:
-            suffix = ".txt"
-        jd_path = tmpdir / f"uploaded_jd{suffix}"
-        jd_path.write_bytes(jd_upload.getvalue())
-        return jd_path, f"Uploaded file: {jd_upload.name}"
-
-    jd_path = tmpdir / "jd.txt"
-    jd_path.write_text(jd_text, encoding="utf-8")
-    return jd_path, "Text area"
+def _write_jd_input(tmpdir: Path, jd_upload: Any) -> tuple[Path, str]:
+    suffix = Path(jd_upload.name or "").suffix.lower()
+    if suffix not in {".docx", ".pdf", ".txt"}:
+        suffix = ".txt"
+    jd_path = tmpdir / f"uploaded_jd{suffix}"
+    jd_path.write_bytes(jd_upload.getvalue())
+    return jd_path, f"Uploaded file: {jd_upload.name}"
 
 
 def _timed(timings: dict[str, float], name: str, fn: Callable, *args, **kwargs):
@@ -393,8 +388,7 @@ def _format_submission(scored_df: pd.DataFrame) -> pd.DataFrame:
 
 def _run_mini_pipeline(
     candidates: list[dict],
-    jd_text: str,
-    jd_upload: Any | None = None,
+    jd_upload: Any,
     progress: Callable[[str], None] | None = None,
 ) -> tuple[pd.DataFrame, pd.DataFrame, dict[str, float], dict[str, Any]]:
     def emit(message: str) -> None:
@@ -422,7 +416,7 @@ def _run_mini_pipeline(
 
         emit("Writing uploaded data to temporary files...")
         _timed(timings, "Write temp inputs", _write_jsonl, paths["candidates"], normalized)
-        jd_path, jd_source = _timed(timings, "Write JD input", _write_jd_input, tmpdir, jd_text, jd_upload)
+        jd_path, jd_source = _timed(timings, "Write JD input", _write_jd_input, tmpdir, jd_upload)
         meta["jd_source"] = jd_source
 
         emit("Parsing JD for precompute signals...")
@@ -612,6 +606,7 @@ with st.sidebar:
     )
     st.markdown("### Runtime notes")
     st.caption("Uses temp artifacts only. It does not depend on data/candidates.jsonl, artifacts/, or models/ in Streamlit Cloud.")
+    st.caption("Upload a JD document; the app parses it with src/jd_parser.py.")
     st.caption("If models/minilm is missing, the app loads all-MiniLM-L6-v2 from Hugging Face and caches it for the session.")
 
 col_left, col_right = st.columns([1, 2], gap="large")
@@ -626,30 +621,16 @@ with col_left:
 
     st.markdown("### Job Description")
     jd_upload = st.file_uploader(
-        "Optional JD document (.docx, .pdf, .txt)",
+        "Upload JD document (.docx, .pdf, .txt)",
         type=["docx", "pdf", "txt"],
-        help="If provided, the app parses this file with src/jd_parser.py. Otherwise it uses the text below.",
-    )
-
-    default_jd = (
-        "We are looking for a Senior AI Engineer with 5-8 years of experience. "
-        "Required skills: Python, embeddings, vector database, ranking evaluation, BM25, "
-        "semantic search, learning to rank. You will build and ship production ML systems. "
-        "Experience with FAISS, Pinecone, or similar vector stores required. "
-        "NDCG, MRR, MAP evaluation experience needed. Startup experience valued. "
-        "Must be willing to work scrappy and ship fast."
-    )
-    jd_text = st.text_area(
-        "Paste JD text",
-        value=default_jd,
-        height=230,
+        help="The app parses this file with src/jd_parser.py.",
     )
 
     run_btn = st.button(
         "Run Mini Pipeline",
         type="primary",
         use_container_width=True,
-        disabled=(uploaded_file is None or (jd_upload is None and not jd_text.strip())),
+        disabled=(uploaded_file is None or jd_upload is None),
     )
 
 with col_right:
@@ -668,8 +649,7 @@ with col_right:
             with st.spinner("Running the true mini ranking pipeline..."):
                 submission_df, scored_df, timings, meta = _run_mini_pipeline(
                     candidates,
-                    jd_text,
-                    jd_upload=jd_upload,
+                    jd_upload,
                     progress=lambda msg: progress_box.info(msg),
                 )
             progress_box.empty()
