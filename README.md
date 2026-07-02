@@ -13,7 +13,8 @@ Welcome to the **Offline Candidate Ranker**, a highly scalable, explainable AI p
 ---
 
 ## 🏗️ System Architecture & Diagram
-> **[Insert Architecture Diagram Image Here]**
+> <img width="1501" height="844" alt="System Architecture" src="https://github.com/user-attachments/assets/06ccc961-1805-4de2-81f8-fc7b57d94e07" />
+
 
 Our ranking system uses a **three-stage explainable AI pipeline** to ensure accurate, fair, and scalable candidate ranking. By heavily relying on offline pre-computation, we bypass the need for external LLM APIs during runtime, ensuring our pipeline easily processes 100,000+ candidates locally on CPU within the strict 5-minute time limit.
 
